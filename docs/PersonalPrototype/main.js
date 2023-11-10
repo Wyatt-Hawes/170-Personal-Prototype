@@ -3,7 +3,7 @@ title = "Flytrap";
 
 // 'description' is displayed on the title screen.
 description = `
-[Hold] Stretch
+ [Hold] & Stretch 
 `;
 
 // User-defined characters can be written here.
@@ -158,6 +158,7 @@ function drawCosmetics() {
   drawFakePlant(vec(13, 102), 6, calculateAngle(-30), 35);
   drawFakePlant(vec(18, 107), 10, calculateAngle(-30), 127);
   drawFakePlant(vec(23, 107), 11, calculateAngle(-30), 85);
+  drawFakePlant(vec(30, 103), 7, calculateAngle(-30), 113);
 
   drawFakePlant(vec(68, 106), 8, calculateAngle(-79), 73);
   drawFakePlant(vec(75, 102), 5, calculateAngle(30), 60);
@@ -215,7 +216,7 @@ function endGame() {
 }
 
 function spawnFly() {
-  let r = Math.random() - 0.5;
+  let r = rnd(-1, 1);
   let offset = rnd(-1000, 1000);
   let UPPER_LIMIT = 10;
   let LOWER_LIMIT = 60;
@@ -261,7 +262,7 @@ function handleFlys() {
 }
 
 function spawnScissors() {
-  let r = Math.random() - 0.5;
+  let r = rnd(-1, 1);
   let offset = rnd(-1000, 1000);
   let UPPER_LIMIT = 10;
   let LOWER_LIMIT = 75;
