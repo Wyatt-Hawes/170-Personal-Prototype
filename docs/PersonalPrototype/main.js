@@ -97,10 +97,6 @@ function update() {
   // Draw plant
   drawPlant(angle);
 
-  if (input.isJustPressed) {
-    play("select");
-  }
-
   handleFlys();
 
   //Re-draw head so it appears ontop of flys
