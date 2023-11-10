@@ -33,19 +33,19 @@ GGGGG
       
 `,
   `
-    ll
-lll ll
-   l
-   l  
-lll ll 
-    ll
+    LL
+LLL LL
+   L
+   L  
+LLL LL 
+    LL
 `,
   `
       
     
-    ll 
-llll
-    ll 
+    LL 
+LLLL
+    LL 
        
 `,
 ];
@@ -65,6 +65,10 @@ options = {
 let cord;
 /** @type {{pos: Vector,direction: number, offset: number}[]} */
 let flys = [];
+
+/** @type {{pos: Vector,direction: number, offset: number}[]} */
+let scissors = [];
+
 let nextPinDist;
 const cordLength = 7;
 let p1;
@@ -87,11 +91,6 @@ function update() {
   // const c1 = char("a", vec(50, 10)).isColliding.char;
   // const c2 = char("b", vec(60, 9)).isColliding.char;
   //const c3 = char("c", vec(70, 10)).isColliding.char;
-  if (ticks % 20 < 10) {
-    const c4 = char("d", vec(80, 10)).isColliding.char;
-  } else {
-    const c5 = char("e", vec(80, 10.5)).isColliding.char;
-  }
 
   // Runs on first tick
   if (!ticks) {
@@ -106,6 +105,12 @@ function update() {
     spawnFly();
   }
 
+  //console.log(600 - Math.floor(difficulty * 10));
+  if (ticks % (600 - Math.floor(difficulty * 10)) == 0) {
+    console.log("Spawning scissors");
+    spawnScissors();
+  }
+
   //Draw other plants
   drawCosmetics();
 
@@ -113,6 +118,7 @@ function update() {
   drawPlant(angle);
 
   handleFlys();
+  handleScissors();
 
   //Re-draw head so it appears ontop of flys
   drawPlant(angle);
@@ -181,6 +187,9 @@ function drawPlant(angle) {
   l = line(cord.pin, top, 3).isColliding;
   color("black");
   drawHead(top);
+
+  //Check for collision of the stem
+  checkLineCollision();
 }
 
 function drawHead(top) {
@@ -189,6 +198,20 @@ function drawHead(top) {
   } else {
     char("b", top.add(0.5, -2)).isColliding;
   }
+}
+
+function checkLineCollision() {
+  if (l.char.d || l.char.e) {
+    console.log("SNIP!");
+    endGame();
+  }
+}
+
+function endGame() {
+  play("explosion");
+  flys = [];
+  scissors = [];
+  end();
 }
 
 function spawnFly() {
@@ -211,7 +234,6 @@ function spawnFly() {
     });
   }
 }
-
 function handleFlys() {
   if (flys.length <= 0) {
     return;
@@ -233,6 +255,50 @@ function handleFlys() {
     }
 
     if (fly.pos.x < -40 || fly.pos.x > 140) {
+      return true;
+    }
+  });
+}
+
+function spawnScissors() {
+  let r = Math.random() - 0.5;
+  let offset = rnd(-1000, 1000);
+  let UPPER_LIMIT = 10;
+  let LOWER_LIMIT = 75;
+
+  if (r < 0) {
+    scissors.push({
+      pos: vec(rnd(-20, -5), rnd(UPPER_LIMIT, LOWER_LIMIT)),
+      direction: 1,
+      offset,
+    });
+  } else {
+    scissors.push({
+      pos: vec(rnd(105, 120), rnd(UPPER_LIMIT, LOWER_LIMIT)),
+      direction: -1,
+      offset,
+    });
+  }
+}
+
+function handleScissors() {
+  if (scissors.length <= 0) {
+    return;
+  }
+  const INTERVAL = 20;
+  const TRIGGER = 10;
+
+  remove(scissors, (sc) => {
+    sc.pos.x += 0.25 * sc.direction * difficulty;
+
+    if (ticks % INTERVAL < TRIGGER) {
+      char("d", sc.pos, { rotation: sc.direction + 1 }).isColliding.char;
+    } else {
+      char("e", sc.pos, { rotation: sc.direction + 1 }).isColliding.char;
+    }
+
+    //Remove when they get far off screen
+    if (sc.pos.x < -40 || sc.pos.x > 140) {
       return true;
     }
   });
