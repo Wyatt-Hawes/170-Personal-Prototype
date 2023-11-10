@@ -1,327 +1,224 @@
-title = "Personal Prototype";
+// Write the game name to 'title'.
+title = "Flytrap";
 
+// 'description' is displayed on the title screen.
 description = `
-[Tap to Grow]
+[Hold] Stretch
 `;
 
+// User-defined characters can be written here.
 characters = [
   `
-ggGbG
-ggGGG
-ggGGG
-ggGGG
-ggGbG
+R    R
+GR  RG
+GGRRGG
+ GGGG 
+  gg  
+      
 `,
   `
-ggGbG
-ggGGG
-ggGGGr
-ggGGG
-ggGbG
+  G   
+ GgG  
+ GgG  
+GGgGG 
+GGGGG 
+ GGG  
 `,
   `
- gg 
-gggg
-gggg
- gg
+ llll
+ll  ll
+l    l
+l    l
+ll  ll 
+ llll 
 `,
   `
- gg 
-gRRg
-gRRg
- gg
-`,
-  `
-ggRrR
-ggRRR
-ggRRR
-ggRRR
-ggRrR
-`,
-  `
-ggGRG
-ggGGG
-ggGGGr
-ggGGG
-ggGRG
-`,
-
-  `
- gg 
-gbbg
-gbbg
- gg
+     
+  l  
+ lll 
+  l
+   
+      
 `,
 ];
-const VIEW_X = 200;
-const VIEW_Y = 200;
+
+// Configure game options.
 options = {
-  viewSize: { x: VIEW_X, y: VIEW_Y },
   isPlayingBgm: true,
   isReplayEnabled: true,
+  // If you want to play a different BGM or SE,
+  // you can try changing the 'seed' value.
   seed: 82,
 };
 
-/** @type {{pos: Vector, turnCenter: Vector, vy: number, posHistory: Vector[], angle: number, tails : {index: number, targetIndex: number}[], fallingTails :{pos: Vector, vy: number}[], isHit: boolean, angularSpeed: number}}*/
-let snakeHead1;
+// (Optional) Defining the types of variables is useful for
+// code completion and error detection.
+/** @type {{angle: number, length: number, pin: Vector}} */
+let cord;
+/** @type {{pos: Vector,direction: number, offset: number}[]} */
+let flys = [];
+let nextPinDist;
+const cordLength = 7;
+let p1;
 
-/** @type {{pos: Vector, turnCenter: Vector, vy: number, posHistory: Vector[], angle: number, tails : {index: number, targetIndex: number}[], fallingTails :{pos: Vector, vy: number}[], isHit: boolean, angularSpeed: number}}*/
-let snakeHead2;
+let l;
+/*
+Next, wyatt, add new sprite for scissors, add collision, check for collision of that new sprite using the line `l`
 
-/* 
-/** @type {{index: number, targetIndex: number}[]} 
-let snakeTails;
-/** @type {{pos: Vector, vy: number}[]} 
-let fallingsnakeTails;
+
 */
-/** @type {{pos: Vector, vx: number}[]} */
-let bullets;
-/** @type {{pos: Vector, vx: number}[]} */
-let spawnedFood;
 
-let nextBulletDist;
-let nextFoodDist;
-
-let movingUp = false;
-let DEFAULT_ANGULAR_SPEED = 0.04;
-let STARTING_LENGTH = 5;
-let radius = 16;
-
-const BOX_SIZE = 40;
-
+// 'update()' is called every frame (60 times per second).
 function update() {
-  //Initializer function
+  let scr = 0; //getScrVal();
+  const SPEED_MULT = 0.3;
+  //const angle = Math.sin(difficulty * 0.03 * (ticks / 3)) * 0.5 - 1.5707;
+  const angle = Math.sin(ticks / 60) * 0.5 - 1.5707;
+
+  //Testing sprites visuals
+  // const c1 = char("a", vec(50, 10)).isColliding.char;
+  // const c2 = char("b", vec(60, 9)).isColliding.char;
+  // const c3 = char("c", vec(70, 10)).isColliding.char;
+  // const c4 = char("d", vec(80, 10)).isColliding.char;
+
+  // Runs on first tick
   if (!ticks) {
-    create_snakes();
-
-    spawnedFood = [];
-    bullets = [];
-    nextBulletDist = 99;
-    nextFoodDist = 80;
-
-    //Give snakes starting length
-  }
-  if (ticks < STARTING_LENGTH) {
-    snakeHead1.tails.push({ index: 0, targetIndex: 0 });
-    snakeHead2.tails.push({ index: 0, targetIndex: 0 });
+    //flys = [vec(50, 100)]; // 'vec()' creates a 2d vector instance.
+    nextPinDist = 10;
+    cord = { angle: 0, length: cordLength, pin: vec(50, 100) };
+    //pins.push(vec(rnd(10, 90), -2 - nextPinDist));
+    spawnFly();
   }
 
-  //Create both squares where player input will be checked for
-  color("light_blue");
-  rect(0, VIEW_Y - BOX_SIZE, BOX_SIZE, BOX_SIZE);
+  if (ticks % 60 == 0) {
+    spawnFly();
+  }
 
-  color("light_red");
-  rect(VIEW_X - BOX_SIZE, VIEW_Y - BOX_SIZE, BOX_SIZE, BOX_SIZE);
+  // Draw plant
+  drawPlant(angle);
 
-  const scoreModifier = sqrt(difficulty);
-
-  //Flip the turning direction of the snake when you press the button
   if (input.isJustPressed) {
-    let x = input.pos.x;
-    let y = input.pos.y;
-    if (0 < x && x < BOX_SIZE && y > VIEW_Y - BOX_SIZE) {
-      changeSnakeDirection(snakeHead1);
-      snakeHead1.angularSpeed = -snakeHead1.angularSpeed;
-    }
-    if (x > VIEW_X - BOX_SIZE && y > VIEW_Y - BOX_SIZE) {
-      changeSnakeDirection(snakeHead2);
-      snakeHead2.angularSpeed = -snakeHead2.angularSpeed;
-    }
+    play("select");
   }
 
-  updateSnakeAngleAndDirection(snakeHead1);
-  updateSnakeAngleAndDirection(snakeHead2);
+  handleFlys();
 
-  //Select correct sprite, jumping = b or falling = a
-  drawSnakeHeads();
+  //Re-draw head so it appears ontop of flys
+  drawPlant(angle);
 
-  nextFoodDist -= scoreModifier;
-  if (nextFoodDist < 0 && spawnedFood.length < 20) {
-    spawnedFood.push({
-      pos: vec(rndi(10, VIEW_X - 10), rndi(10, VIEW_Y - 10)),
-      //pos: vec(60, 60),
-      vx: rnd(1, difficulty) * 0.3,
+  handleCordLength(SPEED_MULT);
+}
+
+function handleCordLength(SPEED_MULT) {
+  if (input.isPressed) {
+    cord.length += difficulty * SPEED_MULT;
+  } else {
+    cord.length += (cordLength - cord.length) * 0.04 * SPEED_MULT;
+  }
+}
+
+function drawPlant(angle) {
+  cord.angle = angle;
+  color("green");
+  const top = vec(cord.pin).addWithAngle(cord.angle, cord.length);
+  l = line(cord.pin, top, 3).isColliding;
+  color("black");
+  drawHead(top);
+}
+
+function drawHead(top) {
+  if (input.isPressed) {
+    char("a", top.add(0, -2)).isColliding;
+  } else {
+    char("b", top.add(0.5, -2)).isColliding;
+  }
+}
+
+function spawnFly() {
+  let r = Math.random() - 0.5;
+  let offset = rnd(-1000, 1000);
+  let UPPER_LIMIT = 10;
+  let LOWER_LIMIT = 60;
+
+  if (r < 0) {
+    flys.push({
+      pos: vec(rnd(-20, -5), rnd(UPPER_LIMIT, LOWER_LIMIT)),
+      direction: 1,
+      offset,
     });
-    nextFoodDist = rnd(50, 80) / sqrt(difficulty);
-    //nextFoodDist = 0;
+  } else {
+    flys.push({
+      pos: vec(rnd(105, 120), rnd(UPPER_LIMIT, LOWER_LIMIT)),
+      direction: -1,
+      offset,
+    });
   }
-  color("black");
-  // cleaning up snakeTails and moving
-  remove(spawnedFood, (food) => {
-    //update bullet position by velocity
+}
 
-    const c = char("c", food.pos).isColliding.char;
+function handleFlys() {
+  if (flys.length <= 0) {
+    return;
+  }
+  remove(flys, (fly) => {
+    fly.pos.x += 0.25 * fly.direction * difficulty;
 
-    //Snake 1 collision
-    if (c.a || c.b) {
-      return handleSnakeCollision(snakeHead1, food);
+    const f = char(
+      "d",
+      vec(fly.pos.x, fly.pos.y + getFlyOffset(fly))
+    ).isColliding;
+
+    //Collision w/ open mouth
+    if (f.char.a) {
+      console.log("munch");
+      play("select");
+      addScore(difficulty * 10 + rnd(-5, 5), fly.pos);
+      return true;
     }
-    if (c.e || c.f) {
-      return handleSnakeCollision(snakeHead2, food);
-    }
 
-    //Snake 2 collision
-
-    return food.pos.x < -3;
-  });
-
-  updateSnakePositionHistory(snakeHead1);
-  updateSnakePositionHistory(snakeHead2);
-
-  //Unsure if two lines below are needed - Wyatt
-  color("transparent");
-  color("black");
-
-  //cleaning up bullets and handling bullet collision, and moving
-  snakeHead1.isHit = false;
-  snakeHead2.isHit = false;
-
-  color("black");
-
-  //   handleSnakeTail(snakeHead1, "g");
-  //   handleSnakeTail(snakeHead2, "h");
-
-  handleSnakeTail(snakeHead1, "g");
-  handleSnakeTail(snakeHead2, "d");
-
-  color("black");
-
-  //Redraw head ontop of tails
-  drawSnakeHeads();
-
-  handleSnakeOutOfBounds(snakeHead1);
-  handleSnakeOutOfBounds(snakeHead2);
-}
-
-//-----------------------------------
-//----------FUNCTIONS----------------
-//-----------------------------------
-
-function create_snakes() {
-  snakeHead1 = {
-    pos: vec(0, 0), //Initializing this does nothing
-    turnCenter: vec(64, 64),
-    vy: 0,
-    posHistory: [],
-    angle: 0,
-    tails: [],
-    fallingTails: [],
-    isHit: false,
-    angularSpeed: DEFAULT_ANGULAR_SPEED,
-  };
-  snakeHead2 = {
-    pos: vec(0, 0),
-    turnCenter: vec(VIEW_X - 64, 80),
-    vy: 0,
-    posHistory: [],
-    angle: 0,
-    tails: [],
-    fallingTails: [],
-    isHit: false,
-    angularSpeed: -DEFAULT_ANGULAR_SPEED,
-  };
-}
-function changeSnakeDirection(snake) {
-  const deltaX = snake.pos.x - snake.turnCenter.x;
-  const deltaY = snake.pos.y - snake.turnCenter.y;
-
-  const newTurnCenterX = snake.pos.x + deltaX;
-  const newTurnCenterY = snake.pos.y + deltaY;
-
-  snake.turnCenter.x = newTurnCenterX;
-  snake.turnCenter.y = newTurnCenterY;
-
-  // Reverse the angle to keep snakeHead.pos in the same place
-  snake.angle = Math.atan2(
-    snake.pos.y - snake.turnCenter.y,
-    snake.pos.x - snake.turnCenter.x
-  );
-}
-
-function updateSnakeAngleAndDirection(snake) {
-  snake.angle += snake.angularSpeed;
-  snake.pos.x = snake.turnCenter.x + radius * Math.cos(snake.angle);
-  snake.pos.y = snake.turnCenter.y + radius * Math.sin(snake.angle);
-}
-
-function updateSnakePositionHistory(snake) {
-  snake.posHistory.unshift(vec(snake.pos));
-}
-
-function handleSnakeCollision(snake, food) {
-  ///////////////
-
-  snake.tails.push({ index: 0, targetIndex: 0 });
-
-  play("select");
-  addScore(snake.tails.length, food.pos.x, food.pos.y - 5);
-  return true;
-}
-
-function handleSnakeTail(snake, skin) {
-  remove(snake.tails, (tail, i) => {
-    tail.targetIndex = 3 * (i + 1);
-    tail.index += (tail.targetIndex - tail.index) * 0.05;
-    const p = snake.posHistory[floor(tail.index)];
-    const cl = char(skin, p).isColliding;
-    //Check snake collision
-    checkTailCollision(cl, skin);
-
-    //Add tail segment to fallingsnakeTails array
-    if (snake.isHit) {
-      console.log("Triggered");
-      snake.fallingTails.push({ pos: vec(p), vy: 0 });
+    if (fly.pos.x < -40 || fly.pos.x > 140) {
       return true;
     }
   });
 }
 
-function checkTailCollision(cl, skin) {
-  //Check if the snake with skin g is colliding with tail e (tail of the other snake)
-  if (skin == "g" && cl.char.e) {
-    endGame();
-  }
-  //Vice versa
-  if (skin == "d" && cl.char.a) {
-    endGame();
-  }
+function getFlyOffset(fly) {
+  return (
+    Math.sin((ticks + fly.offset) / 25) * 6 +
+    Math.sin((ticks + fly.offset) / 20) * 3 +
+    Math.sin((ticks + fly.offset) / 10) * 1.5 +
+    Math.sin((ticks + fly.offset) / 5) * 1 +
+    Math.sin((ticks + fly.offset) / 2.5) * 0.5
+  );
 }
 
-function handleTailFalling(snake) {
-  remove(snake.fallingTails, (tail) => {
-    tail.vy += 0.3 * difficulty;
-    tail.pos.y += tail.vy;
-    char("g", tail.pos, { mirror: { y: -1 } });
-    return tail.pos.y > 103;
-  });
-}
+// if (nextPin != null) {
+//   play("powerUp");
+//   // Add up the score.
+//   // By specifying the coordinates as the second argument,
+//   // the added score is displayed on the screen.
+//   addScore(ceil(cord.pin.distanceTo(nextPin)), nextPin);
+//   cord.pin = nextPin;
+//   cord.length = cordLength;
+//}
 
-function handleSnakeOutOfBounds(snake) {
-  const LEEWAY = 15;
-  if (
-    snake.pos.y > VIEW_Y + LEEWAY ||
-    snake.pos.y < -LEEWAY ||
-    snake.pos.x < -LEEWAY ||
-    snake.pos.x > VIEW_X + LEEWAY
-  ) {
-    endGame();
-  }
-}
+// let nextPin;
+// 'remove()' passes the elements of the array of the first argument to
+// the function of the second argument in order and executes it.
+// If the function returns true, the element will be removed from the array.
+// remove(pins, (p) => {
+//   p.y += scr;
+//   // Draw a box and check if it collides with other black rectangles or lines.
+//   color("green");
+//   if (box(p, 3).isColliding.rect.black && p !== cord.pin) {
+//     nextPin = p;
+//   }
+//   color("black");
+//   return p.y > 102;
+// });
 
-function drawSnakeHeads() {
-  char(snakeHead1.vy < 0 ? "b" : "a", snakeHead1.pos, {
-    rotation:
-      (snakeHead1.angle / Math.PI) * 2 +
-      1 * (snakeHead1.angularSpeed / Math.abs(snakeHead1.angularSpeed)),
-  });
-  char(snakeHead2.vy < 0 ? "f" : "e", snakeHead2.pos, {
-    rotation:
-      (snakeHead2.angle / Math.PI) * 2 +
-      1 * (snakeHead2.angularSpeed / Math.abs(snakeHead2.angularSpeed)),
-  });
-}
-
-function endGame() {
-  play("explosion");
-  end();
-}
+// Check for end game
+// if (cord.pin.y > 98) {
+//   play("explosion");
+//   // Call 'end()' to end the game. (Game Over)
+//   end();
+// }
